@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+
+//base de datos
+import { collection, addDoc } from 'firebase/firestore';
+import { database } from '../src/config/fb'; 
 
 const Infocliente = () => {
   const navigation = useNavigation();
+  //obtener fecha y cancha
 
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -49,10 +54,23 @@ const Infocliente = () => {
       setErrors(newErrors);
       return;
     }
-    
+    try {
+      const clienteRef = await addDoc(collection(database, 'clientes'), {
+        nombre,
+        apellido,
+        dni,
+      });
+
+      console.log('Cliente registrado con ID:', clienteRef.id);
+
+      navigation.navigate('Pagar');
+    } catch (error) {
+      console.error('Error al enviar datos:', error);
+    }
+  
     // Aquí puedes manejar la navegación o cualquier otra acción que desees
     console.log("Datos:", { nombre, apellido, dni });
-    navigation.navigate('Pagar');
+   
   };
 
   return (
@@ -92,7 +110,8 @@ const Infocliente = () => {
       </View>
     </View>
   );
-};
+}
+
 
 const styles = StyleSheet.create({
   container: {

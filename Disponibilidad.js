@@ -1,13 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View , TouchableOpacity,Modal, Button, Pressable} from 'react-native';
-import React, { useState } from 'react';
+import React, { useState ,useEffect} from 'react';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 
+//base de datos
+import { collection, addDoc,getDocs } from 'firebase/firestore';
+import { database } from '../src/config/fb';
+
+
 export default function Disponibilidad() {
   const navigation= useNavigation();
+
 
   const [modalVisible, setModalVisible] = useState(false);
   const [canchaUno, setCanchaUno] = useState('no-asignado');
@@ -15,6 +21,37 @@ export default function Disponibilidad() {
   const [canchaTres, setCanchaTres] = useState('no-asignado');
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [fecha, setFecha] = useState('');
+  const [horariosOcupados, setHorariosOcupados] = useState([0, 0, 0]);
+
+  // Obtener los horarios ocupados desde Firestore
+  useEffect(() => {
+    const fetchHorariosOcupados = async () => {
+      try {
+        const snapshot = await getDocs(collection(database, 'Reservas'));
+        const data = snapshot.docs.map(doc => doc.data());
+
+        const ocupadosCanchaUno = data.filter(item => item.canchaUno !== 'no-asignado' && item.fecha === fecha).length;
+        const ocupadosCanchaDos = data.filter(item => item.canchaDos !== 'no-asignado' && item.fecha === fecha).length;
+        const ocupadosCanchaTres = data.filter(item => item.canchaTres !== 'no-asignado' && item.fecha === fecha).length;
+
+        setHorariosOcupados([ocupadosCanchaUno, ocupadosCanchaDos, ocupadosCanchaTres]);
+      } catch (error) {
+        console.error('Error al obtener datos de Firestore:', error);
+      }
+    };
+    if (fecha) {
+      fetchHorariosOcupados();
+    }
+  }, [fecha]);
+
+  const getColor = (ocupados) => {
+    if (ocupados === 0) return 'green';
+    if (ocupados >= 5 && ocupados <= 7) return 'yellow';
+    if (ocupados >= 8) return 'red';
+    return 'blue'; // Por defecto
+  };
+
+
 
   // Mostrar y ocultar el selector de fecha
   const showDatePicker = () => setDatePickerVisibility(true);
@@ -26,23 +63,50 @@ export default function Disponibilidad() {
     hideDatePicker(); // Ocultar el selector después de seleccionar la fecha
   };
 
-  // Manejar el envío de datos
-  const handleSubmit = () => {
-    setModalVisible(true);
-  };
-
-  // Cancelar la acción del modal
-  const handleCancel = () => {
-    setModalVisible(false);
-  };
+    // Función para enviar datos a la base de datos
+    const sendDataToDatabase = async () => {
+      try {
+        const reservaRef = await addDoc(collection(database, 'Reservas'), {
+          canchaUno,
+          canchaDos,
+          canchaTres,
+          fecha,
+        });
+  
+        console.log('Documento escrito con ID: ', reservaRef.id);
+        navigation.navigate("Stack");
+      } catch (error) {
+        console.error('Error al enviar datos: ', error);
+      }
+    };
+  
+    // Manejar el envío de datos
+    const handleSubmit = () => {
+      setModalVisible(true);
+    };
+  
+    // Confirmar el envío desde el modal
+    const handleConfirmModal = () => {
+      sendDataToDatabase();
+      setModalVisible(false);
+    };
+  
+    // Cancelar la acción del modal
+    const handleCancel = () => {
+      setModalVisible(false);
+    };
+  
 
   return (
     <View style={styles.container}>
     
+    
       <Text style={styles.label}>Cancha N°1</Text>
+      <View style={styles.pickercontainer}>
+      <View style={[styles.circle, { backgroundColor: getColor(horariosOcupados[0]) }]} />
       <Picker
         selectedValue={canchaUno}
-        style={styles.input}
+        style={styles.Picker}
         onValueChange={(itemValue) => setCanchaUno(itemValue)}
       >
         <Picker.Item label="Ninguno" value="no-asignado" />
@@ -56,11 +120,16 @@ export default function Disponibilidad() {
         <Picker.Item label="21:00 a 22:00 hs" value="hora8" />
         <Picker.Item label="22:00 a 23:00 hs" value="hora9" />
       </Picker>
+     
+      </View>
+    
 
       <Text style={styles.label}>Cancha N°2</Text>
+      <View style={styles.pickercontainer}>
+      <View style={[styles.circle, { backgroundColor: getColor(horariosOcupados[1]) }]} />
       <Picker
         selectedValue={canchaDos}
-        style={styles.input}
+        style={styles.Picker}
         onValueChange={(itemValue) => setCanchaDos(itemValue)}
       >
         <Picker.Item label="Ninguno" value="no-asignado" />
@@ -74,10 +143,15 @@ export default function Disponibilidad() {
         <Picker.Item label="21:00 a 22:00 hs" value="hora8" />
         <Picker.Item label="22:00 a 23:00 hs" value="hora9" />
       </Picker>
+      
+      </View>
+    
       <Text style={styles.label}>Cancha N°3</Text>
+      <View style={styles.pickercontainer}>
+      <View style={[styles.circle, { backgroundColor: getColor(horariosOcupados[2]) }]} />
       <Picker
         selectedValue={canchaTres}
-        style={styles.input}
+        style={styles.Picker}
         onValueChange={(itemValue) => setCanchaTres(itemValue)}
       >
         <Picker.Item label="Ninguno" value="no-asignado" />
@@ -91,7 +165,9 @@ export default function Disponibilidad() {
         <Picker.Item label="21:00 a 22:00 hs" value="hora8" />
         <Picker.Item label="22:00 a 23:00 hs" value="hora9" />
       </Picker>
-
+      
+      </View>
+      
 
       <Text style={styles.label}>Fecha de reserva</Text>
       <Pressable style={styles.input} onPress={showDatePicker}>
@@ -104,6 +180,9 @@ export default function Disponibilidad() {
         onConfirm={handleConfirm}
         onCancel={hideDatePicker}
       />
+
+  
+
 
       <TouchableOpacity 
         onPress={handleSubmit}
@@ -133,7 +212,7 @@ export default function Disponibilidad() {
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>¿Confirma la reserva?</Text>
             <View style={styles.modalButtons}>
-              <Button title="Sí" onPress={() => { setModalVisible(false); navigation.navigate("Stack"); }} color="green" />
+              <Button title="Sí" onPress={handleConfirmModal} color="green" />
               <Button title="No" onPress={handleCancel} color="red" />
             </View>
           </View>
@@ -141,6 +220,9 @@ export default function Disponibilidad() {
       </Modal>
 
       <StatusBar style="auto" />
+
+      
+
     </View>
   );
 }
@@ -151,6 +233,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#404AA3',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  circle: {
+    width: 25,
+    height: 25,
+    borderRadius: 25,
+    margin:0,
+    padding:0,
+    marginRight:10,
+    marginBottom:15
+  },
+  pickercontainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '90%',
+    justifyContent: 'flex-start',
+    marginBottom: 20,
+  },
+  Picker:{
+    height: 45,
+    width: '80%',
+    borderColor: '#404aa3',
+    borderWidth: 1.5,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    borderRadius: 13,
+    backgroundColor: '#ffffff',
+    color: '#404aa3',
+    textAlign:'center',
+    alignItems:'center',
+    justifyContent:'center',
+    flex:1
   },
   label: {
     fontSize: 18,
@@ -169,7 +283,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     color: '#404aa3',
     textAlign:'center',
-    justifyContent:'center'
+    alignItems:'center',
+    justifyContent:'center',
+  
   },
   Se: {
     justifyContent: 'center',
