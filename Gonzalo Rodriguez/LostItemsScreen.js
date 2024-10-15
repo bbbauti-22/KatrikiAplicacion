@@ -4,8 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { database, analytics } from '/apa/papa/firebaseConfig';
-import { logEvent } from 'firebase/analytics';
+import { database } from '/apa/papa/firebaseConfig';
 
 const courts = [
   { id: '1', name: 'Cancha 1' },
@@ -50,25 +49,25 @@ export default function LostItemsScreen({ onBack }) {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const lostItemsRef = collection(database, 'Busqueda_Objetos_Perdidos');
+      const lostItemsRef = collection(database, 'Busqueda_Objeto_Perdido');
+
+      // Formato del nombre del archivo
+      const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase(); // Eliminar espacios y convertir a minúscula
+      const formattedDate = date.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
+      const formattedTime = selectedTimeSlot.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
+      const fileName = `${courtName}_${formattedDate}_${formattedTime}.jpg`; // Nombre del archivo
+
+      // Consulta para buscar la imagen por nombre
       const q = query(
         lostItemsRef,
-        where('courtId', '==', selectedCourt),
-        where('date', '==', date.toISOString().split('T')[0]),
-        where('timeSlot', '==', selectedTimeSlot)
+        where('fileName', '==', fileName) // Cambia 'fileName' con la propiedad que almacena el nombre del archivo en Firestore
       );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         const itemData = querySnapshot.docs[0].data();
-        setItemImage(itemData.imageUrl);
+        setItemImage(itemData.imageUrl); // Asigna la URL de la imagen
         setShowModal(true);
-  
-        logEvent(analytics, 'search_lost_item', {
-          court: selectedCourt,
-          date: dateInput,
-          timeSlot: selectedTimeSlot
-        });
       } else {
         Alert.alert('No se encontró ningún objeto perdido.');
       }
@@ -82,12 +81,6 @@ export default function LostItemsScreen({ onBack }) {
   const handleRequestItem = () => {
     setItemRequested(true);
     Alert.alert('Éxito', 'Objeto solicitado con éxito.');
-  
-    logEvent(analytics, 'request_lost_item', {
-      court: selectedCourt,
-      date: dateInput,
-      timeSlot: selectedTimeSlot
-    });
   };
 
   return (
@@ -220,7 +213,7 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
     width: '100%',
-    top:-83,
+    top: -83,
   },
   datePicker: {
     flexDirection: 'row',
@@ -244,7 +237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     color: '#000',
     fontSize: 16,
-    top:15,
+    top: 15,
   },
   calendarIcon: {
     padding: 10,
