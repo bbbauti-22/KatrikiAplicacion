@@ -49,15 +49,13 @@ export default function LostItemsScreen({ onBack }) {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const lostItemsRef = collection(database, 'Busqueda_Objeto_Perdido');
+      const lostItemsRef = collection(database, 'lost_items'); // Asegúrate de que la colección sea la misma
 
-      // Formato del nombre del archivo
       const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase(); // Eliminar espacios y convertir a minúscula
       const formattedDate = date.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
       const formattedTime = selectedTimeSlot.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
       const fileName = `${courtName}_${formattedDate}_${formattedTime}.jpg`; // Nombre del archivo
 
-      // Consulta para buscar la imagen por nombre
       const q = query(
         lostItemsRef,
         where('fileName', '==', fileName) // Cambia 'fileName' con la propiedad que almacena el nombre del archivo en Firestore
@@ -200,15 +198,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginVertical: 10,
     color: 'white',
-  },
-  pickerContainer: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginVertical: 10,
-    backgroundColor: '#fff',
-    width: '100%',
   },
   picker: {
     height: 50,
