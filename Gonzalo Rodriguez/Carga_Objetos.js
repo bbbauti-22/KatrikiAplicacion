@@ -69,9 +69,9 @@ const UploadMediaFile = () => {
   };
 
   const generateImageName = () => {
-    const courtName = courts.find(court => court.id === selectedCourt).name;
-    const date = selectedDate.toLocaleDateString().replace(/\//g, '-');
-    const time = selectedTime.replace(/:/g, '-');
+    const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase(); // Eliminar espacios y convertir a minúscula
+    const date = selectedDate.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
+    const time = selectedTime.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
     return `${courtName}_${date}_${time}.jpg`;
   };
 
@@ -102,14 +102,11 @@ const UploadMediaFile = () => {
         date: selectedDate.toISOString(),
         time: selectedTime,
         imageUrl: downloadURL,
+        fileName: filename, // Añadir fileName
         createdAt: new Date(),
       };
 
-      console.log('Datos a subir a Firestore:', dataToUpload);
-      
-      // Intentar subir a Firestore
       await addDoc(collection(db, 'lost_items'), dataToUpload);
-      
       setUploading(false);
       Alert.alert('¡Datos y foto cargados con éxito!');
       setImage(null);
@@ -238,7 +235,6 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
     width: '100%',
-    top: -83,
   },
   datePicker: {
     borderWidth: 2,
@@ -259,7 +255,7 @@ const styles = StyleSheet.create({
     width: '50%',
     justifyContent: 'center',
     alignContent: 'center',
-    left:'25%',
+    left: '25%',
     backgroundColor: '#fff',
     marginVertical: 20,
   },
