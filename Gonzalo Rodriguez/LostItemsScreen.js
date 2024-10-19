@@ -4,7 +4,8 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../config'; // Asegúrate de que esta ruta sea correcta
+import { ref, getDownloadURL } from 'firebase/storage'; // Importar para Firebase Storage
+import { db, storage } from '../config'; // Asegúrate de que storage esté exportado correctamente
 
 const courts = [
   { id: '1', name: 'Cancha 1' },
@@ -58,7 +59,6 @@ export default function LostItemsScreen({ onBack }) {
     setLoading(true);
     try {
       const lostItemsRef = collection(db, 'lost_items'); // Asegúrate de que esta sea la colección correcta
-
       const fileName = generateImageName(); // Genera el nombre del archivo
 
       const q = query(
@@ -69,7 +69,11 @@ export default function LostItemsScreen({ onBack }) {
 
       if (!querySnapshot.empty) {
         const itemData = querySnapshot.docs[0].data();
-        setItemImage(itemData.imageUrl); // Asigna la URL de la imagen
+        const storageRef = ref(storage, fileName); // Referencia al archivo en Storage
+        
+        // Obtener la URL de descarga
+        const url = await getDownloadURL(storageRef);
+        setItemImage(url); // Asigna la URL de la imagen
         setShowModal(true);
       } else {
         Alert.alert('No se encontró ningún objeto perdido.');
@@ -88,7 +92,6 @@ export default function LostItemsScreen({ onBack }) {
 
   return (
     <View style={styles.container}>
-      
       <Text style={styles.title}>Objetos Perdidos</Text>
 
       <Text style={styles.label}>Selecciona la cancha:</Text>
