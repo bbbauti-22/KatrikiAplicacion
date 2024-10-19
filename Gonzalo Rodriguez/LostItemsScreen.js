@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { database } from '/apa/papa/firebaseConfig';
+import { db } from '../config'; // Asegúrate de que esta ruta sea correcta
 
 const courts = [
   { id: '1', name: 'Cancha 1' },
@@ -46,19 +46,24 @@ export default function LostItemsScreen({ onBack }) {
     setDatePickerVisibility(false);
   };
 
+  // Función para generar el nombre del archivo
+  const generateImageName = () => {
+    const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase();
+    const formattedDate = date.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
+    const formattedTime = selectedTimeSlot.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
+    return `${courtName}_${formattedDate}_${formattedTime}.jpg`; // Nombre del archivo
+  };
+
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const lostItemsRef = collection(database, 'lost_items'); // Asegúrate de que la colección sea la misma
+      const lostItemsRef = collection(db, 'lost_items'); // Asegúrate de que esta sea la colección correcta
 
-      const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase(); // Eliminar espacios y convertir a minúscula
-      const formattedDate = date.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
-      const formattedTime = selectedTimeSlot.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
-      const fileName = `${courtName}_${formattedDate}_${formattedTime}.jpg`; // Nombre del archivo
+      const fileName = generateImageName(); // Genera el nombre del archivo
 
       const q = query(
         lostItemsRef,
-        where('fileName', '==', fileName) // Cambia 'fileName' con la propiedad que almacena el nombre del archivo en Firestore
+        where('fileName', '==', fileName) // Busca el archivo en Firestore
       );
       const querySnapshot = await getDocs(q);
 
@@ -83,10 +88,9 @@ export default function LostItemsScreen({ onBack }) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Icon name="arrow-left" size={30} color="#000" />
-      </TouchableOpacity>
+      
       <Text style={styles.title}>Objetos Perdidos</Text>
+
       <Text style={styles.label}>Selecciona la cancha:</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -173,121 +177,129 @@ export default function LostItemsScreen({ onBack }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#404aa3',
-    width: '100%',
-    justifyContent: 'flex-start',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    zIndex: 1,
-  },
-  title: {
-    fontSize: 27,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 30,
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 18,
-    marginVertical: 10,
-    color: 'white',
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-    top: -83,
-  },
-  datePicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#ccc',
-    marginVertical: 10,
-    backgroundColor: 'white',
-    width: '100%',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  dateText: {
-    flex: 1,
-    height: 50,
-    paddingHorizontal: 10,
-    color: '#000',
-    fontSize: 16,
-    top: 15,
-  },
-  calendarIcon: {
-    padding: 10,
-  },
-  searchButton: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: '#737BDF',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '80%',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  image: {
-    width: '100%',
-    height: 200,
-    marginBottom: 15,
-  },
-  requestButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#4caf50',
-    borderRadius: 5,
-    alignItems: 'center',
-    width: '100%',
-  },
-  requestButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonDisabled: {
-    backgroundColor: '#9e9e9e',
-  },
-  modalButton: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#f44336',
-    borderRadius: 5,
-    alignItems: 'center',
-    width: '100%',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: '#404aa3',
+      width: '100%',
+      justifyContent: 'flex-start',
+    },
+    backButton: {
+      position: 'absolute',
+      top: 20,
+      left: 20,
+      zIndex: 1,
+    },
+    title: {
+      fontSize: 27,
+      textAlign: 'center',
+      fontWeight: 'bold',
+      color: 'white',
+      marginTop: 30,
+      marginBottom: 15,
+    },
+    label: {
+      fontSize: 18,
+      marginVertical: 10,
+      color: 'white',
+    },
+    picker: {
+      height: 50,
+      width: '100%',
+      top: -83,
+    },
+    pickerContainer: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        marginVertical: 10,
+        backgroundColor: '#fff',
+      },
+    datePicker: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 10,
+      overflow: 'hidden',
+      borderWidth: 2,
+      borderColor: '#ccc',
+      marginVertical: 10,
+      backgroundColor: 'white',
+      width: '100%',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    dateText: {
+      flex: 1,
+      height: 50,
+      paddingHorizontal: 10,
+      color: '#000',
+      fontSize: 16,
+      top: 15,
+    },
+    calendarIcon: {
+      padding: 10,
+    },
+    searchButton: {
+      marginTop: 20,
+      padding: 15,
+      backgroundColor: '#737BDF',
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    searchButtonText: {
+      color: '#fff',
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      width: '80%',
+      padding: 20,
+      backgroundColor: '#fff',
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    image: {
+      width: '100%',
+      height: 200,
+      marginBottom: 15,
+    },
+    requestButton: {
+      marginTop: 10,
+      padding: 10,
+      backgroundColor: '#4caf50',
+      borderRadius: 5,
+      alignItems: 'center',
+      width: '100%',
+    },
+    requestButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    buttonDisabled: {
+      backgroundColor: '#9e9e9e',
+    },
+    modalButton: {
+      marginTop: 15,
+      padding: 10,
+      backgroundColor: '#f44336',
+      borderRadius: 5,
+      alignItems: 'center',
+      width: '100%',
+    },
+    modalButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+  });
