@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, Modal, Button, Image, SafeAreaView, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { firebase } from '../config';
-import * as FileSystem from 'expo-file-system';
+import { db, storage } from '../config'; // Asegúrate de que esta ruta sea correcta
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import { collection, addDoc } from 'firebase/firestore';
-
-const db = firebase.firestore();
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const courts = [
   { id: '1', name: 'Cancha 1' },
@@ -32,7 +30,7 @@ const timeSlots = [
   '23:00 - 00:00',
 ];
 
-const UploadMediaFile = () => {
+const UploadMediaFile = ({ onBack }) => {
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState('1');
@@ -69,50 +67,34 @@ const UploadMediaFile = () => {
   };
 
   const generateImageName = () => {
-    const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase(); // Eliminar espacios y convertir a minúscula
-    const date = selectedDate.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
-    const time = selectedTime.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
+    const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase();
+    const date = selectedDate.toISOString().split('T')[0];
+    const time = selectedTime.split(' - ')[0].replace(/:/g, '');
     return `${courtName}_${date}_${time}.jpg`;
   };
 
   const uploadMedia = async () => {
     setUploading(true);
     try {
-      const { uri } = await FileSystem.getInfoAsync(image);
-      const blob = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onload = () => {
-          resolve(xhr.response);
-        };
-        xhr.onerror = () => {
-          reject(new TypeError('Network request failed'));
-        };
-        xhr.responseType = 'blob';
-        xhr.open('GET', uri, true);
-        xhr.send(null);
-      });
-
       const filename = generateImageName();
-      const storageRef = firebase.storage().ref().child(filename);
-      await storageRef.put(blob);
-      const downloadURL = await storageRef.getDownloadURL();
+      const blob = await (await fetch(image)).blob(); // Convertir la imagen a blob
+      const storageRef = ref(storage, filename);
+      await uploadBytes(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
 
       const dataToUpload = {
         court: selectedCourt,
         date: selectedDate.toISOString(),
         time: selectedTime,
         imageUrl: downloadURL,
-        fileName: filename, // Añadir fileName
+        fileName: filename,
         createdAt: new Date(),
       };
 
       await addDoc(collection(db, 'lost_items'), dataToUpload);
       setUploading(false);
       Alert.alert('¡Datos y foto cargados con éxito!');
-      setImage(null);
-      setSelectedCourt('1');
-      setSelectedDate(new Date());
-      setSelectedTime('10:00 - 11:00');
+      resetForm();
     } catch (error) {
       setUploading(false);
       handleUploadError(error);
@@ -131,6 +113,13 @@ const UploadMediaFile = () => {
 
   const cancelUpload = () => {
     setModalVisible(false);
+  };
+
+  const resetForm = () => {
+    setImage(null);
+    setSelectedCourt('1');
+    setSelectedDate(new Date());
+    setSelectedTime('10:00 - 11:00');
   };
 
   return (
@@ -207,107 +196,109 @@ const UploadMediaFile = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#404aa3',
-    padding: 20,
-  },
-  title: {
-    fontSize: 27,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 18,
-    marginVertical: 10,
-    color: 'white',
-  },
-  pickerContainer: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginVertical: 10,
-    backgroundColor: '#fff',
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
-  datePicker: {
-    borderWidth: 2,
-    borderColor: '#ccc',
-    borderRadius: 20,
-    padding: 15,
-    marginVertical: 10,
-    backgroundColor: '#fff',
-  },
-  dateText: {
-    fontSize: 16,
-  },
-  imageFrame: {
-    borderWidth: 2,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    height: 120,
-    width: '50%',
-    justifyContent: 'center',
-    alignContent: 'center',
-    left: '25%',
-    backgroundColor: '#fff',
-    marginVertical: 20,
-  },
-  image: {
-    height: '100%',
-    width: '100%',
-    borderRadius: 10,
-    resizeMode: 'cover',
-  },
-  imagePlaceholder: {
-    color: '#aaa',
-    fontSize: 14,
-    alignItems: 'center',
-  },
-  uploadButton: {
-    backgroundColor: '#737bfd',
-    borderRadius: 50,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    width: '100%',
-  },
-  uploadButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginTop: 20,
-  },
-});
-
-export default UploadMediaFile;
+    container: {
+        flex: 1,
+        padding: 20,
+        backgroundColor: '#404aa3',
+        width: '100%',
+        justifyContent: 'flex-start',
+      },
+    title: {
+      fontSize: 27,
+      textAlign: 'center',
+      fontWeight: 'bold',
+      color: 'white',
+      marginBottom: 15,
+    },
+    label: {
+      fontSize: 18,
+      marginVertical: 10,
+      color: 'white',
+    },
+    pickerContainer: {
+      borderRadius: 20,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: '#ccc',
+      marginVertical: 10,
+      backgroundColor: '#fff',
+    },
+    picker: {
+      height: 50,
+      width: '100%',
+    },
+    datePicker: {
+      borderWidth: 2,
+      borderColor: '#ccc',
+      borderRadius: 20,
+      padding: 15,
+      marginVertical: 10,
+      backgroundColor: '#fff',
+    },
+    dateText: {
+      fontSize: 16,
+    },
+    imageFrame: {
+      borderWidth: 2,
+      borderColor: '#ccc',
+      borderRadius: 10,
+      height: 120,
+      width: '50%',
+      justifyContent: 'center',
+      alignContent: 'center',
+      left: '25%',
+      backgroundColor: '#fff',
+      marginVertical: 20,
+    },
+    image: {
+      height: '100%',
+      width: '100%',
+      borderRadius: 10,
+      resizeMode: 'cover',
+    },
+    imagePlaceholder: {
+      color: '#aaa',
+      fontSize: 14,
+      alignItems: 'center',
+    },
+    uploadButton: {
+      backgroundColor: '#737bfd',
+      borderRadius: 50,
+      paddingVertical: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 10,
+      width: '100%',
+    },
+    uploadButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      backgroundColor: '#fff',
+      padding: 20,
+      borderRadius: 10,
+      width: '80%',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      marginBottom: 10,
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      width: '100%',
+      marginTop: 20,
+    },
+  });
+  
+  export default UploadMediaFile;
