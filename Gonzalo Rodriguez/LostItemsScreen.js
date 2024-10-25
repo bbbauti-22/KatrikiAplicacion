@@ -4,8 +4,8 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { ref, getDownloadURL } from 'firebase/storage'; // Importar para Firebase Storage
-import { db, storage } from '../config'; // Asegúrate de que storage esté exportado correctamente
+import { ref, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../config'; 
 
 const courts = [
   { id: '1', name: 'Cancha 1' },
@@ -90,7 +90,7 @@ export default function LostItemsScreen({ onBack }) {
     Alert.alert('Éxito', 'Objeto solicitado con éxito.');
   };
 
-  return (
+  return( 
     <View style={styles.container}>
       <Text style={styles.title}>Objetos Perdidos</Text>
 
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     picker: {
       height: 50,
       width: '100%',
-      top: -83,
+ 
     },
     pickerContainer: {
         borderRadius: 20,
