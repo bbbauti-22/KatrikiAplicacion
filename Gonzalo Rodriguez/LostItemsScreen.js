@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
+import { Text, View, StyleSheet, Image, TouchableOpacity, Modal, ActivityIndicator, Alert, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore'; 
 import { ref, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../config'; 
 
@@ -40,6 +40,7 @@ export default function LostItemsScreen({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [itemImage, setItemImage] = useState(null);
   const [itemRequested, setItemRequested] = useState(false);
+  const [itemDescription, setItemDescription] = useState(''); // Nuevo estado para la descripción
 
   const handleDateConfirm = (date) => {
     setDate(date);
@@ -47,33 +48,30 @@ export default function LostItemsScreen({ onBack }) {
     setDatePickerVisibility(false);
   };
 
-  // Función para generar el nombre del archivo
   const generateImageName = () => {
     const courtName = courts.find(court => court.id === selectedCourt).name.replace(/\s+/g, '').toLowerCase();
-    const formattedDate = date.toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
-    const formattedTime = selectedTimeSlot.split(' - ')[0].replace(/:/g, ''); // Hora en formato HHMM
-    return `${courtName}_${formattedDate}_${formattedTime}.jpg`; // Nombre del archivo
+    const formattedDate = date.toISOString().split('T')[0];
+    const formattedTime = selectedTimeSlot.split(' - ')[0].replace(/:/g, '');
+    return `${courtName}_${formattedDate}_${formattedTime}.jpg`;
   };
 
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const lostItemsRef = collection(db, 'lost_items'); // Asegúrate de que esta sea la colección correcta
-      const fileName = generateImageName(); // Genera el nombre del archivo
+      const lostItemsRef = collection(db, 'lost_items');
+      const fileName = generateImageName();
 
       const q = query(
         lostItemsRef,
-        where('fileName', '==', fileName) // Busca el archivo en Firestore
+        where('fileName', '==', fileName)
       );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         const itemData = querySnapshot.docs[0].data();
-        const storageRef = ref(storage, fileName); // Referencia al archivo en Storage
-        
-        // Obtener la URL de descarga
+        const storageRef = ref(storage, fileName);
         const url = await getDownloadURL(storageRef);
-        setItemImage(url); // Asigna la URL de la imagen
+        setItemImage(url);
         setShowModal(true);
       } else {
         Alert.alert('No se encontró ningún objeto perdido.');
@@ -85,9 +83,26 @@ export default function LostItemsScreen({ onBack }) {
     setLoading(false);
   };
 
-  const handleRequestItem = () => {
-    setItemRequested(true);
-    Alert.alert('Éxito', 'Objeto solicitado con éxito.');
+  const handleRequestItem = async () => {
+    if (!itemDescription) {
+      Alert.alert('Error', 'Por favor, ingresa una descripción del objeto.');
+      return;
+    }
+
+    try {
+      const lostItemsRef = collection(db, 'lost_items');
+      await addDoc(lostItemsRef, {
+        descripcion: itemDescription,
+        fecha: dateInput,
+        cancha: selectedCourt,
+        horario: selectedTimeSlot,
+      });
+      setItemRequested(true);
+      Alert.alert('Éxito', 'Objeto solicitado con éxito.');
+    } catch (error) {
+      console.error("Error al solicitar el objeto: ", error);
+      Alert.alert('Error', 'No se pudo solicitar el objeto.');
+    }
   };
 
   return( 
@@ -131,6 +146,13 @@ export default function LostItemsScreen({ onBack }) {
           ))}
         </Picker>
       </View>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Descripción del objeto perdido"
+        value={itemDescription}
+        onChangeText={setItemDescription}
+      />
 
       <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
         {loading ? (
@@ -187,12 +209,6 @@ const styles = StyleSheet.create({
       width: '100%',
       justifyContent: 'flex-start',
     },
-    backButton: {
-      position: 'absolute',
-      top: 20,
-      left: 20,
-      zIndex: 1,
-    },
     title: {
       fontSize: 27,
       textAlign: 'center',
@@ -209,16 +225,15 @@ const styles = StyleSheet.create({
     picker: {
       height: 50,
       width: '100%',
- 
     },
     pickerContainer: {
-        borderRadius: 20,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#ccc',
-        marginVertical: 10,
-        backgroundColor: '#fff',
-      },
+      borderRadius: 20,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: '#ccc',
+      marginVertical: 10,
+      backgroundColor: '#fff',
+    },
     datePicker: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -241,7 +256,6 @@ const styles = StyleSheet.create({
       paddingHorizontal: 10,
       color: '#000',
       fontSize: 16,
-      top: 15,
     },
     calendarIcon: {
       padding: 10,
@@ -305,4 +319,13 @@ const styles = StyleSheet.create({
       fontSize: 16,
       fontWeight: 'bold',
     },
-  });
+    input: {
+      height: 40,
+      borderColor: '#ccc',
+      borderWidth: 1,
+      borderRadius: 5,
+      paddingHorizontal: 10,
+      marginVertical: 10,
+      backgroundColor: '#fff',
+    },
+});
