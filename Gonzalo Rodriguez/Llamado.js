@@ -1,13 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native';
+import { StyleSheet, Text, View, FlatList } from 'react-native';
 import { useState, useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { db } from '/MiProyecto/config/'; 
 import { collection, getDocs } from "firebase/firestore";
 
 export default function Inicio() {
-  const navigation = useNavigation();
-  const [menuVisible, setMenuVisible] = useState(false);
   const [reservas, setReservas] = useState([]);
   const [objetosPerdidos, setObjetosPerdidos] = useState([]);
 
@@ -20,7 +17,7 @@ export default function Inicio() {
     };
 
     const fetchObjetosPerdidos = async () => {
-      const objetosCollection = collection(db, "ObjetosPerdidos");
+      const objetosCollection = collection(db, "Soli_Obj");
       const objetosSnapshot = await getDocs(objetosCollection);
       const objetosList = objetosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setObjetosPerdidos(objetosList);
@@ -33,34 +30,9 @@ export default function Inicio() {
   const lastThreeReservas = reservas.slice(-3).reverse(); // Obtener las últimas 3 reservas
   const lastThreeObjetosPerdidos = objetosPerdidos.slice(-3).reverse(); // Obtener las últimas 3 solicitudes
 
-  const handleSelectMenuOption = (screen) => {
-    setMenuVisible(false);
-    navigation.navigate(screen);
-  };
-
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
-        <Text style={styles.menuButtonText}>Menu</Text>
-      </TouchableOpacity>
-
-      {menuVisible && (
-        <View style={styles.menu}>
-          <TouchableOpacity onPress={() => handleSelectMenuOption("Reservas")}>
-            <Text style={styles.menuItem}>Reservas</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleSelectMenuOption("Ubicacion")}>
-            <Text style={styles.menuItem}>Ubicación</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleSelectMenuOption("Equipo")}>
-            <Text style={styles.menuItem}>Equipo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(false)}>
-            <Text style={styles.closeMenu}>Cerrar</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
+     
       <View style={styles.reservasContainer}>
         <Text style={styles.reservasTitle}>Mis Reservas</Text>
         <FlatList
@@ -85,8 +57,12 @@ export default function Inicio() {
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <View style={styles.objeto}>
-              <Text style={styles.objetoText}>Solicitaste Objeto Perdido: {item.descripcion}</Text>
-              {item.fecha && <Text style={styles.objetoText}>Fecha: {item.fecha}</Text>}
+              <Text style={styles.objetoText}>
+                Solicitaste Objeto Perdido: {item.fileName.replace('.jpg', '')}
+              </Text>
+              <Text style={styles.objetoText}>
+                Fecha: {item.requestedAt?.toDate().toLocaleString()}
+              </Text>
             </View>
           )}
           showsVerticalScrollIndicator={false}
@@ -101,48 +77,12 @@ export default function Inicio() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#404AA3',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
     padding: 20,
-  },
-  menuButton: {
-    backgroundColor: '#737BFD',
-    padding: 10,
-    borderRadius: 10,
-    margin: 20,
-    marginTop: '10%',
-    marginLeft: '-75%',
-    justifyContent: 'center',
-  },
-  menuButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  menu: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 10,
-    elevation: 5,
-    zIndex: 1,
-  },
-  menuItem: {
-    padding: 10,
-    fontSize: 18,
-    color: '#404AA3',
-  },
-  closeMenu: {
-    padding: 10,
-    fontSize: 16,
-    color: 'red',
-    textAlign: 'center',
+    backgroundColor: '#404aa3',
+    width: '100%',
+    justifyContent: 'flex-start',
   },
   reservasContainer: {
-    position: 'absolute',
-    flex: 1,
     backgroundColor: '#fff',
     padding: 15,
     marginVertical: 10,
@@ -152,23 +92,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 3,
-    width: '70%',
-    marginTop: '40%', // Ajusta según necesites
+    width: '100%',
+    marginBottom: 20, // Espacio entre los contenedores
   },
   objetosContainer: {
-    position: 'absolute',
-    flex: 1,
     backgroundColor: '#fff',
     padding: 15,
-    marginVertical: 10,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 3,
-    width: '70%',
-    marginTop: '60%', // Ajusta según necesites
+    width: '100%',
   },
   reservasTitle: {
     fontSize: 20,
@@ -201,3 +137,4 @@ const styles = StyleSheet.create({
     padding: 2,
   },
 });
+
