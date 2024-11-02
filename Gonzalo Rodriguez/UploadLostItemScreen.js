@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, Modal, Button, Image, SafeAreaView, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { db, storage } from '../config'; // Asegúrate de que esta ruta sea correcta
+import { db, storage } from '../config'; 
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import { collection, addDoc } from 'firebase/firestore';
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     picker: {
       height: 50,
       width: '100%',
+      top:-86,
     },
     datePicker: {
       borderWidth: 2,
