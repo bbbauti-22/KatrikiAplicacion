@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, Modal, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { Text, View, StyleSheet, Image, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
-import { collection, addDoc } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../config'; 
 
@@ -40,7 +40,7 @@ export default function LostItemsScreen({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [itemImage, setItemImage] = useState(null);
   const [itemRequested, setItemRequested] = useState(false);
-  const [itemDescription, setItemDescription] = useState(''); // Nuevo estado para la descripción
+  const [itemName, setItemName] = useState('');
 
   const handleDateConfirm = (date) => {
     setDate(date);
@@ -60,11 +60,7 @@ export default function LostItemsScreen({ onBack }) {
     try {
       const lostItemsRef = collection(db, 'lost_items');
       const fileName = generateImageName();
-
-      const q = query(
-        lostItemsRef,
-        where('fileName', '==', fileName)
-      );
+      const q = query(lostItemsRef, where('fileName', '==', fileName));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -72,6 +68,7 @@ export default function LostItemsScreen({ onBack }) {
         const storageRef = ref(storage, fileName);
         const url = await getDownloadURL(storageRef);
         setItemImage(url);
+        setItemName(itemData.descripcion);
         setShowModal(true);
       } else {
         Alert.alert('No se encontró ningún objeto perdido.');
@@ -79,29 +76,26 @@ export default function LostItemsScreen({ onBack }) {
     } catch (error) {
       Alert.alert('Error', 'No se pudo buscar el objeto perdido.');
       console.error(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRequestItem = async () => {
-    if (!itemDescription) {
-      Alert.alert('Error', 'Por favor, ingresa una descripción del objeto.');
-      return;
-    }
-
+    setItemRequested(true);
+    
+    // Guardar el dato en la colección "Soli_Obj"
     try {
-      const lostItemsRef = collection(db, 'lost_items');
-      await addDoc(lostItemsRef, {
-        descripcion: itemDescription,
-        fecha: dateInput,
-        cancha: selectedCourt,
-        horario: selectedTimeSlot,
+      const requestRef = collection(db, 'Soli_Obj');
+      const fileName = generateImageName(); // Genera el nombre del archivo
+      await addDoc(requestRef, {
+        fileName: fileName,
+        requestedAt: new Date(), // Guarda la fecha y hora de la solicitud
       });
-      setItemRequested(true);
       Alert.alert('Éxito', 'Objeto solicitado con éxito.');
     } catch (error) {
-      console.error("Error al solicitar el objeto: ", error);
-      Alert.alert('Error', 'No se pudo solicitar el objeto.');
+      Alert.alert('Error', 'No se pudo guardar la solicitud.');
+      console.error(error);
     }
   };
 
@@ -146,13 +140,6 @@ export default function LostItemsScreen({ onBack }) {
           ))}
         </Picker>
       </View>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Descripción del objeto perdido"
-        value={itemDescription}
-        onChangeText={setItemDescription}
-      />
 
       <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
         {loading ? (
@@ -202,130 +189,122 @@ export default function LostItemsScreen({ onBack }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 20,
-      backgroundColor: '#404aa3',
-      width: '100%',
-      justifyContent: 'flex-start',
-    },
-    title: {
-      fontSize: 27,
-      textAlign: 'center',
-      fontWeight: 'bold',
-      color: 'white',
-      marginTop: 30,
-      marginBottom: 15,
-    },
-    label: {
-      fontSize: 18,
-      marginVertical: 10,
-      color: 'white',
-    },
-    picker: {
-      height: 50,
-      width: '100%',
-    },
-    pickerContainer: {
-      borderRadius: 20,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: '#ccc',
-      marginVertical: 10,
-      backgroundColor: '#fff',
-    },
-    datePicker: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderRadius: 10,
-      overflow: 'hidden',
-      borderWidth: 2,
-      borderColor: '#ccc',
-      marginVertical: 10,
-      backgroundColor: 'white',
-      width: '100%',
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-    },
-    dateText: {
-      flex: 1,
-      height: 50,
-      paddingHorizontal: 10,
-      color: '#000',
-      fontSize: 16,
-    },
-    calendarIcon: {
-      padding: 10,
-    },
-    searchButton: {
-      marginTop: 20,
-      padding: 15,
-      backgroundColor: '#737BDF',
-      borderRadius: 10,
-      alignItems: 'center',
-    },
-    searchButtonText: {
-      color: '#fff',
-      fontSize: 18,
-      fontWeight: 'bold',
-    },
-    modalContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-      width: '80%',
-      padding: 20,
-      backgroundColor: '#fff',
-      borderRadius: 10,
-      alignItems: 'center',
-    },
-    image: {
-      width: '100%',
-      height: 200,
-      marginBottom: 15,
-    },
-    requestButton: {
-      marginTop: 10,
-      padding: 10,
-      backgroundColor: '#4caf50',
-      borderRadius: 5,
-      alignItems: 'center',
-      width: '100%',
-    },
-    requestButtonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    buttonDisabled: {
-      backgroundColor: '#9e9e9e',
-    },
-    modalButton: {
-      marginTop: 15,
-      padding: 10,
-      backgroundColor: '#f44336',
-      borderRadius: 5,
-      alignItems: 'center',
-      width: '100%',
-    },
-    modalButtonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    input: {
-      height: 40,
-      borderColor: '#ccc',
-      borderWidth: 1,
-      borderRadius: 5,
-      paddingHorizontal: 10,
-      marginVertical: 10,
-      backgroundColor: '#fff',
-    },
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#404aa3',
+    width: '100%',
+    justifyContent: 'flex-start',
+  },
+  title: {
+    fontSize: 27,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 30,
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 18,
+    marginVertical: 10,
+    color: 'white',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    top:-85,
+  },
+  pickerContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginVertical: 10,
+    backgroundColor: '#fff',
+  },
+  datePicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#ccc',
+    marginVertical: 10,
+    backgroundColor: 'white',
+    width: '100%',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  dateText: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 10,
+    color: '#000',
+    fontSize: 16,
+  },
+  calendarIcon: {
+    padding: 10,
+  },
+  searchButton: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#737BDF',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  image: {
+    width: '100%',
+    height: 200,
+    marginBottom: 15,
+  },
+  requestButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#4caf50',
+    borderRadius: 5,
+    alignItems: 'center',
+    width: '100%',
+  },
+  requestButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonDisabled: {
+    backgroundColor: '#9e9e9e',
+  },
+  modalButton: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f44336',
+    borderRadius: 5,
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
