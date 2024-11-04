@@ -1,27 +1,40 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { useEffect, useState } from 'react';
+import { db } from '../../firebaseconfig';
 
 export default function Inicioempl() {
-    return (
-        <View style={styles.container}>  
-            <View style={styles.reservasContainer}>
-                <Text style={styles.reservasTitle}>Datos</Text>
-                <View style={styles.reserva}>
-                    <Text style={styles.reservaText}>Gonzalo cargo turno
-                    para Joaco. 21/10/2024</Text>
-                </View>
-                <View style={styles.reserva}>
-                    <Text style={styles.reservaText}>Agustin ha dado de baja 
-                    el turno de Lucas. 22/08/2024</Text>
-                </View>
-                <View style={styles.reserva}>
-                    <Text style={styles.reservaText}>Bautista ha dado de baja 
-                    el turno de Thiago. 23/08/2024 </Text>
-                </View>
+  const [reservas, setReservas] = useState([]);
+
+  useEffect(() => {
+    // Cargar los datos desde Firestore
+    const obtenerReservas = async () => {
+      try {
+        const snapshot = await db.collection('reservas').get();
+        const reservasData = snapshot.docs.map(doc => doc.data());
+        setReservas(reservasData);
+      } catch (error) {
+        console.error("Error al obtener las reservas: ", error);
+      }
+    };
+    obtenerReservas();
+  }, []);
+
+  return (
+    <View style={styles.container}>  
+      <View style={styles.reservasContainer}>
+        <Text style={styles.reservasTitle}>Datos</Text>
+        <FlatList
+          data={reservas}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.reserva}>
+              <Text style={styles.reservaText}>{item.nombreEmpleado} {item.accion} turno para {item.nombreUsuario} el {item.fecha}</Text>
             </View>
-            <StatusBar style="auto" />
-        </View>
-    );
+          )}
+        />
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
